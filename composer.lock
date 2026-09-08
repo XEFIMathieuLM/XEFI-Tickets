@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "7f5f2bedb0b92c8276666d83cd561fe5",
+    "content-hash": "cbf02bc15f8689da311fdfa79e619a54",
     "packages": [
         {
             "name": "brick/math",
@@ -1474,6 +1474,38 @@
                 "source": "https://github.com/laravel/tinker/tree/v3.0.2"
             },
             "time": "2026-03-17T14:54:13+00:00"
+        },
+        {
+            "name": "layers/tickets",
+            "version": "1.0.0",
+            "dist": {
+                "type": "path",
+                "url": "./layers/tickets",
+                "reference": "8285797e0e9875e5a1b458eafc06cbd9e6f265d0"
+            },
+            "require": {
+                "xefi/laravel-osdd": "*"
+            },
+            "type": "layer",
+            "extra": {
+                "laravel": {
+                    "providers": [
+                        "Tickets\\Providers\\TicketsServiceProvider"
+                    ]
+                }
+            },
+            "autoload": {
+                "psr-4": {
+                    "Tickets\\": "src/",
+                    "Tickets\\Database\\Seeders\\": "database/seeders/",
+                    "Tickets\\Database\\Factories\\": "database/factories/",
+                    "Tickets\\Tests\\": "tests/"
+                }
+            },
+            "description": "Domaine ticketing",
+            "transport-options": {
+                "relative": true
+            }
         },
         {
             "name": "league/commonmark",

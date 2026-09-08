@@ -8,9 +8,16 @@
         "framework"
     ],
     "license": "MIT",
+    "repositories": [
+        {
+            "type": "path",
+            "url": "./layers/*"
+        }
+    ],
     "require": {
         "php": "^8.3",
         "laravel/framework": "^13.17",
+        "layers/tickets": "*",
         "laravel/tinker": "^3.0",
         "livewire/livewire": "^4.4",
         "lomkit/laravel-access-control": "^0.5.0",

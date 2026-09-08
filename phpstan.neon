@@ -1,0 +1,39 @@
+includes:
+    - vendor/larastan/larastan/extension.neon
+    - vendor/xefi/phpstan-xefi-rules/extension.neon
+
+parameters:
+    paths:
+        - app
+        - database
+        - layers
+        - routes
+
+    level: 5
+
+    # Larastan infers model properties from the migrations; a layer keeps its own.
+    databaseMigrationsPath:
+        - database/migrations
+        - layers/tickets/database/migrations
+
+    ignoreErrors:
+        # faker() exposes its generators through __call, so PHPStan cannot see them.
+        # The faker_mixin.php stub shipped by the package is unusable here: its own
+        # @method tags raise non-ignorable missing-iterable-type errors.
+        -
+            message: '#^Call to an undefined method Xefi\\Faker\\(Faker|Container\\Container)::#'
+        # controlled() / uncontrolled() are Eloquent builder macros registered at
+        # runtime by lomkit/laravel-access-control, so PHPStan cannot see them.
+        -
+            message: '#^Call to an undefined method [^:]+Builder[^:]*::(un)?controlled\(\)#'
+        # The one place the cahier blesses a catch: the presentation layer turns
+        # the expected business exception into a message and stops there. The
+        # catch names IllegalTicketTransition alone, nothing wider, and nothing
+        # is swallowed — see TicketForm::assign().
+        -
+            identifier: xefi.noTryCatch
+            path: layers/tickets/src/Livewire/TicketForm.php
+        # Migration published by spatie/laravel-permission, not application code.
+        -
+            identifier: xefi.maxLinePerMethod
+            path: database/migrations/*_create_permission_tables.php
