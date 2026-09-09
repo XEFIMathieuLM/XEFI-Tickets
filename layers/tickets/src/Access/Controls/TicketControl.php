@@ -14,13 +14,10 @@ use Tickets\Enums\TicketPermission;
 use Tickets\Models\Ticket;
 
 /**
- * Every perimeter answers the same two questions: whom it applies to, decided
- * on permissions only, and what it lets through, expressed as a constraint the
- * database evaluates. No perimeter ever looks at a role name.
- *
- * Order matters. AllTicketsPerimeter is not an overlay, so a user who may see
- * everything short-circuits the two narrow perimeters; those two are overlays
- * and combine with OR, so a user holding both sees the union.
+ * Order matters: the first perimeter is not an overlay and short-circuits the
+ * two others, which combine with OR. Everything it grants therefore rests on
+ * seeing every ticket, or it would hand the whole base to whoever holds one of
+ * the acting permissions.
  */
 class TicketControl extends Control
 {
@@ -32,6 +29,24 @@ class TicketControl extends Control
     protected string $model = Ticket::class;
 
     /**
+     * Applies the perimeters to a query for whoever is signed in. A caller
+     * with no identity is given nothing, which is the safe default.
+     *
+     * @param  Builder<Ticket>  $query
+     * @return Builder<Ticket>
+     */
+    public function forCurrentUser(Builder $query): Builder
+    {
+        $user = auth()->user();
+
+        if (! $user instanceof Model) {
+            return $this->noResultQuery($query);
+        }
+
+        return $this->queried($query, $user);
+    }
+
+    /**
      * @return array<int, Perimeter>
      */
     protected function perimeters(): array
@@ -39,9 +54,7 @@ class TicketControl extends Control
         return [
             AllTicketsPerimeter::new()
                 ->allowed(fn (User $user, string $method): bool => match ($method) {
-                    'view' => $user->can(TicketPermission::ViewAll->value),
-                    'update', 'delete' => $user->can(TicketPermission::Assign->value)
-                        || $user->can(TicketPermission::Close->value),
+                    'view', 'update', 'delete' => $user->can(TicketPermission::ViewAll->value),
                     default => false,
                 })
                 ->should(fn (User $user, Ticket $ticket): bool => true)
@@ -50,6 +63,7 @@ class TicketControl extends Control
             AssignedTicketsPerimeter::new()
                 ->allowed(fn (User $user, string $method): bool => match ($method) {
                     'view' => $user->can(TicketPermission::ViewAssigned->value),
+                    'update' => $user->can(TicketPermission::Handle->value),
                     default => false,
                 })
                 ->should(fn (User $user, Ticket $ticket): bool => $ticket->assigned_technician_id === $user->id)
@@ -59,6 +73,7 @@ class TicketControl extends Control
                 ->allowed(fn (User $user, string $method): bool => match ($method) {
                     'view' => $user->can(TicketPermission::ViewOwn->value),
                     'create' => $user->can(TicketPermission::Create->value),
+                    'update' => $user->can(TicketPermission::Close->value),
                     default => false,
                 })
                 ->should(fn (User $user, Ticket $ticket): bool => $ticket->requester_id === $user->id)

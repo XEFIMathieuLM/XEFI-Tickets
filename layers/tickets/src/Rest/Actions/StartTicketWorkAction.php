@@ -3,10 +3,16 @@
 namespace Tickets\Rest\Actions;
 
 use Tickets\Actions\StartTicketWork;
+use Tickets\Enums\TicketPermission;
 use Tickets\Models\Ticket;
 
 class StartTicketWorkAction extends TicketTransitionAction
 {
+    protected function permission(): TicketPermission
+    {
+        return TicketPermission::Handle;
+    }
+
     /**
      * @param  array<string, mixed>  $fields
      */

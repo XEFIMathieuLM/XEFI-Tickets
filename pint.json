@@ -1,0 +1,7 @@
+{
+    "preset": "laravel",
+    "notPath": [
+        "faker_mixin.php",
+        "_ide_helper.php"
+    ]
+}

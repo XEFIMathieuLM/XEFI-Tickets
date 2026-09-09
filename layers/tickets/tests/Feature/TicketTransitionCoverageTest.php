@@ -11,31 +11,27 @@ use Tickets\Models\Ticket;
 use Tickets\Tests\TestCase;
 
 /**
- * Walks the whole specification table through the API, so every transition
- * endpoint is proven reachable and not only the two the other suite uses.
+ * Walks every endpoint of the lifecycle through the API, so each one is proven
+ * reachable and not only the two the other suite uses.
  */
 class TicketTransitionCoverageTest extends TestCase
 {
-    private const ACTIONS_URI = '/api/v1/tickets/actions/';
+    private const ACTIONS_URI = '/api/v1/tickets/actions/%s';
 
-    public function test_every_transition_of_the_table_is_reachable_through_the_api(): void
+    public function test_every_endpoint_of_the_lifecycle_is_reachable_through_the_api(): void
     {
         Notification::fake();
 
         $technician = $this->userWith(TicketRole::Technician);
-        $manager = $this->userWith(TicketRole::Manager);
         $ticket = Ticket::factory()->create(['status' => TicketStatus::Open]);
 
-        $this->actingAs($manager);
+        $this->actingAs($this->userWith(TicketRole::Manager));
 
-        $this->assertStatusAfter('assign-ticket', $ticket, TicketStatus::Assigned, $technician);
+        $this->assertStatusAfter('assign-ticket', $ticket, TicketStatus::Open, $technician);
+        $this->assertStatusAfter('start-ticket-work', $ticket, TicketStatus::InProgress);
         $this->assertStatusAfter('unassign-ticket', $ticket, TicketStatus::Open);
-        $this->assertStatusAfter('assign-ticket', $ticket, TicketStatus::Assigned, $technician);
-        $this->assertStatusAfter('start-ticket-work', $ticket, TicketStatus::InProgress);
-        $this->assertStatusAfter('pause-ticket-work', $ticket, TicketStatus::Assigned);
-        $this->assertStatusAfter('start-ticket-work', $ticket, TicketStatus::InProgress);
         $this->assertStatusAfter('resolve-ticket', $ticket, TicketStatus::Resolved);
-        $this->assertStatusAfter('reopen-ticket', $ticket, TicketStatus::InProgress);
+        $this->assertStatusAfter('start-ticket-work', $ticket, TicketStatus::InProgress);
         $this->assertStatusAfter('resolve-ticket', $ticket, TicketStatus::Resolved);
         $this->assertStatusAfter('close-ticket', $ticket, TicketStatus::Closed);
     }
@@ -45,7 +41,7 @@ class TicketTransitionCoverageTest extends TestCase
         Ticket::factory()->create(['status' => TicketStatus::Open]);
 
         $this->actingAs($this->userWith(TicketRole::Manager))
-            ->postJson(self::ACTIONS_URI.'close-ticket', [])
+            ->postJson(sprintf(self::ACTIONS_URI, 'close-ticket'), [])
             ->assertUnprocessable();
     }
 
@@ -61,7 +57,7 @@ class TicketTransitionCoverageTest extends TestCase
             $payload['fields'] = [['name' => 'technician_id', 'value' => $technician->id]];
         }
 
-        $response = $this->postJson(self::ACTIONS_URI.$uriKey, $payload)->assertOk();
+        $response = $this->postJson(sprintf(self::ACTIONS_URI, $uriKey), $payload)->assertOk();
 
         $this->assertDatabaseHas('tickets', ['id' => $ticket->id, 'status' => $expected->value]);
 

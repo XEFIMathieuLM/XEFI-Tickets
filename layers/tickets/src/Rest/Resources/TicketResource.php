@@ -11,13 +11,13 @@ use Lomkit\Rest\Http\Requests\RestRequest;
 use Lomkit\Rest\Relations\BelongsTo;
 use Lomkit\Rest\Relations\HasMany;
 use Lomkit\Rest\Relations\Relation;
+use Tickets\Access\Controls\TicketControl;
+use Tickets\Enums\TicketPermission;
 use Tickets\Enums\TicketPriority;
 use Tickets\Enums\TicketStatus;
 use Tickets\Models\Ticket;
 use Tickets\Rest\Actions\AssignTicketAction;
 use Tickets\Rest\Actions\CloseTicketAction;
-use Tickets\Rest\Actions\PauseTicketWorkAction;
-use Tickets\Rest\Actions\ReopenTicketAction;
 use Tickets\Rest\Actions\ResolveTicketAction;
 use Tickets\Rest\Actions\StartTicketWorkAction;
 use Tickets\Rest\Actions\UnassignTicketAction;
@@ -88,7 +88,7 @@ class TicketResource extends Resource
             'title' => ['required'],
             'description' => ['required'],
             'status' => ['required'],
-            'priority' => ['required'],
+            'priority' => $this->priorityRules($request),
         ];
     }
 
@@ -103,7 +103,23 @@ class TicketResource extends Resource
         return [
             'status' => ['prohibited'],
             'resolved_at' => ['prohibited'],
+            'priority' => $this->priorityRules($request),
         ];
+    }
+
+    /**
+     * Whoever opens a ticket does not weigh it: only the support team may name
+     * an importance, and the model default covers everybody else.
+     *
+     * @return array<int, string>
+     */
+    private function priorityRules(RestRequest $request): array
+    {
+        $author = $request->user();
+
+        return $author !== null && $author->can(TicketPermission::Handle->value)
+            ? []
+            : ['prohibited'];
     }
 
     /**
@@ -115,9 +131,7 @@ class TicketResource extends Resource
             AssignTicketAction::make(),
             UnassignTicketAction::make(),
             StartTicketWorkAction::make(),
-            PauseTicketWorkAction::make(),
             ResolveTicketAction::make(),
-            ReopenTicketAction::make(),
             CloseTicketAction::make(),
         ];
     }
@@ -137,12 +151,12 @@ class TicketResource extends Resource
     public function searchQuery(RestRequest $request, Builder $query): Builder
     {
         /** @var EloquentBuilder $query */
-        return $query->controlled();
+        return app(TicketControl::class)->forCurrentUser($query);
     }
 
     public function destroyQuery(RestRequest $request, Builder $query): Builder
     {
         /** @var EloquentBuilder $query */
-        return $query->controlled();
+        return app(TicketControl::class)->forCurrentUser($query);
     }
 }

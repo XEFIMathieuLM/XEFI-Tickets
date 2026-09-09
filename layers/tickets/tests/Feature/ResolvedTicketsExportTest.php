@@ -32,9 +32,11 @@ class ResolvedTicketsExportTest extends TestCase
 
         $response = $this->actingAs($this->userWith(TicketRole::Manager))->get(self::EXPORT_URI);
 
+        $month = now()->format('Y-m');
+
         $response->assertOk()
             ->assertHeader('content-type', 'text/csv; charset=utf-8')
-            ->assertDownload('resolved-tickets-'.now()->format('Y-m').'.csv');
+            ->assertDownload("resolved-tickets-{$month}.csv");
 
         $csv = $response->streamedContent();
 

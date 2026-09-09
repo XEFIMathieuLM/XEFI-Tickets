@@ -5,6 +5,7 @@ namespace Tickets\Rest\Actions;
 use App\Models\User;
 use Lomkit\Rest\Http\Requests\RestRequest;
 use Tickets\Actions\AssignTicket;
+use Tickets\Enums\TicketPermission;
 use Tickets\Models\Ticket;
 
 class AssignTicketAction extends TicketTransitionAction
@@ -17,6 +18,11 @@ class AssignTicketAction extends TicketTransitionAction
         return [
             'technician_id' => ['required', 'integer', 'exists:users,id'],
         ];
+    }
+
+    protected function permission(): TicketPermission
+    {
+        return TicketPermission::Assign;
     }
 
     /**

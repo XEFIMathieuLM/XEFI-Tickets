@@ -3,13 +3,14 @@
 namespace Tickets\Actions;
 
 use Tickets\Actions\Concerns\TransitionsTicket;
+use Tickets\Contracts\MovesTicket;
 use Tickets\Enums\TicketStatus;
 use Tickets\Models\Ticket;
 
 /**
  * Resolved → Closed. The last move a ticket makes.
  */
-class CloseTicket
+class CloseTicket implements MovesTicket
 {
     use TransitionsTicket;
 

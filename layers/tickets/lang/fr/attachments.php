@@ -10,6 +10,7 @@ return [
     ],
     'hints' => [
         'max_size' => ':size Ko maximum par fichier.',
+        'optional_at_opening' => 'Facultatif. :size Ko maximum. Vous pourrez en ajouter d’autres ensuite.',
     ],
     'actions' => [
         'attach' => 'Joindre',

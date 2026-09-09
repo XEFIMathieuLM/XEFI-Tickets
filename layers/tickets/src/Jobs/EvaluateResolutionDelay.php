@@ -3,15 +3,15 @@
 namespace Tickets\Jobs;
 
 use Illuminate\Contracts\Queue\ShouldQueue;
+use Illuminate\Database\Query\Expression;
 use Illuminate\Foundation\Queue\Queueable;
-use Illuminate\Support\Facades\DB;
+use Tickets\Enums\TicketPriority;
 use Tickets\Models\Ticket;
 
 /**
- * Decides whether a resolved ticket met the target its priority carries.
- *
- * The job receives an identifier rather than a model, and is dispatched after
- * the commit, so it can only ever read a state the database has accepted.
+ * Decides whether a resolved ticket met the target its priority carries. It
+ * takes an identifier and runs after the commit, so it only reads a state the
+ * database has accepted.
  */
 class EvaluateResolutionDelay implements ShouldQueue
 {
@@ -27,17 +27,21 @@ class EvaluateResolutionDelay implements ShouldQueue
             return;
         }
 
-        // The elapsed time and the comparison are evaluated by the database:
-        // no row is pulled into PHP to be measured. Only the target itself
-        // comes from the enum, as an integer number of hours.
         Ticket::query()
             ->whereKey($ticket->getKey())
             ->toBase()
-            ->update([
-                'is_resolved_on_time' => DB::raw(sprintf(
-                    'timestampdiff(HOUR, `created_at`, `resolved_at`) <= %d',
-                    $ticket->priority->targetHandlingHours(),
-                )),
-            ]);
+            ->update(['is_resolved_on_time' => $this->elapsedHoursWithin($ticket->priority)]);
+    }
+
+    /**
+     * The elapsed time and the comparison are evaluated by the database; only
+     * the target crosses over, as a number of hours.
+     */
+    private function elapsedHoursWithin(TicketPriority $priority): Expression
+    {
+        return new Expression(sprintf(
+            'timestampdiff(HOUR, `created_at`, `resolved_at`) <= %d',
+            $priority->targetHandlingHours(),
+        ));
     }
 }

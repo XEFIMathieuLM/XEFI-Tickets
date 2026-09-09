@@ -26,6 +26,7 @@ return [
         'updated' => 'Le ticket a été enregistré.',
         'assigned' => 'Le ticket a été assigné.',
         'transition_refused' => 'Un ticket ne peut pas passer de « :from » à « :target ».',
+        'ticket_is_closed' => 'Ce ticket est clôturé : il ne peut plus être modifié.',
     ],
     'empty' => [
         'technicians' => 'Aucun technicien ne peut encore prendre ce ticket.',

@@ -1,0 +1,20 @@
+<?php
+
+namespace Xefi\Faker\Container;
+
+/**
+ * @method string words(int $words = 3)
+ * @method string sentences(int $sentences = 3)
+ * @method string paragraphs(int $paragraphs = 3)
+ * @method int digit()
+ * @method int number(int $min, int $max)
+ * @method string uuid()
+ * @method \DateTime dateTime(\DateTimeInterface|string|int $fromTimestamp = '-30 years', \DateTimeInterface|string|int $toTimestamp = 'now')
+ * @method mixed randomElement(array<int, mixed> $elements)
+ * @method self ucfirst()
+ * @method self lowercase()
+ * @method self uppercase()
+ * @method self nullable()
+ * @method self unique()
+ */
+class Container {}

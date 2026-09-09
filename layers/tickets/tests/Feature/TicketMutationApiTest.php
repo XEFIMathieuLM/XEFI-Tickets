@@ -24,7 +24,6 @@ class TicketMutationApiTest extends TestCase
                 'title' => 'Laptop will not boot',
                 'description' => 'Black screen since this morning.',
                 'status' => TicketStatus::Open->value,
-                'priority' => TicketPriority::High->value,
             ])],
         ]);
 
@@ -33,7 +32,43 @@ class TicketMutationApiTest extends TestCase
             'title' => 'Laptop will not boot',
             'requester_id' => $requester->id,
             'status' => TicketStatus::Open->value,
-            'priority' => TicketPriority::High->value,
+            'priority' => TicketPriority::default()->value,
+        ]);
+    }
+
+    public function test_a_requester_may_not_weigh_the_ticket_it_opens(): void
+    {
+        $requester = $this->userWith(TicketRole::Requester);
+
+        $this->actingAs($requester)->postJson(self::MUTATE_URI, [
+            'mutate' => [$this->creationPayload($requester, [
+                'title' => 'Laptop will not boot',
+                'description' => 'Black screen since this morning.',
+                'status' => TicketStatus::Open->value,
+                'priority' => TicketPriority::Critical->value,
+            ])],
+        ])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('mutate.0.attributes.priority');
+
+        $this->assertDatabaseCount('tickets', 0);
+    }
+
+    public function test_the_support_team_weighs_a_ticket_through_the_api(): void
+    {
+        $ticket = Ticket::factory()->create(['priority' => TicketPriority::Low]);
+
+        $this->actingAs($this->userWith(TicketRole::Manager))->postJson(self::MUTATE_URI, [
+            'mutate' => [[
+                'operation' => 'update',
+                'key' => $ticket->id,
+                'attributes' => ['priority' => TicketPriority::Critical->value],
+            ]],
+        ])->assertOk();
+
+        $this->assertDatabaseHas('tickets', [
+            'id' => $ticket->id,
+            'priority' => TicketPriority::Critical->value,
         ]);
     }
 
@@ -45,7 +80,6 @@ class TicketMutationApiTest extends TestCase
             'mutate' => [$this->creationPayload($requester, [
                 'description' => 'No title supplied.',
                 'status' => TicketStatus::Open->value,
-                'priority' => TicketPriority::High->value,
             ])],
         ]);
 
@@ -62,7 +96,6 @@ class TicketMutationApiTest extends TestCase
                 'title' => 'Mouse not working',
                 'description' => 'Nothing happens when clicking.',
                 'status' => 'sleeping',
-                'priority' => TicketPriority::Low->value,
             ])],
         ]);
 

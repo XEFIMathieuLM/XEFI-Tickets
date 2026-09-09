@@ -3,13 +3,14 @@
 namespace Tickets\Actions;
 
 use Tickets\Actions\Concerns\TransitionsTicket;
+use Tickets\Contracts\MovesTicket;
 use Tickets\Enums\TicketStatus;
 use Tickets\Models\Ticket;
 
 /**
  * Assigned → Open. Takes the ticket back from its technician.
  */
-class UnassignTicket
+class UnassignTicket implements MovesTicket
 {
     use TransitionsTicket;
 

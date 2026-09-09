@@ -8,7 +8,8 @@ use Tickets\Models\Ticket;
 
 /**
  * The single gate every transition goes through. The enum owns the table of
- * legal moves; the action owns the refusal.
+ * legal moves; the action owns the refusal. A ticket leaving the resolved side
+ * of the lifecycle drops its resolution stamp, whichever route it takes.
  */
 trait TransitionsTicket
 {
@@ -19,5 +20,12 @@ trait TransitionsTicket
         }
 
         $ticket->status = $target;
+
+        if (in_array($target, [TicketStatus::Resolved, TicketStatus::Closed], true)) {
+            return;
+        }
+
+        $ticket->resolved_at = null;
+        $ticket->is_resolved_on_time = null;
     }
 }

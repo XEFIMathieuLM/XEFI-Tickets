@@ -9,18 +9,26 @@ use Tickets\Models\Attachment;
 use Tickets\Models\Ticket;
 
 /**
- * Puts the bytes on a disk and records where they went. The disk is private:
- * nothing under it is served directly by the web server.
+ * Puts the bytes on a private disk and records where they went.
  */
 class AttachFileToTicket
 {
     public const DISK = 'local';
 
+    public const MAX_SIZE_IN_KILOBYTES = 5120;
+
+    /**
+     * @var array<int, string>
+     */
+    public const ALLOWED_EXTENSIONS = ['pdf', 'png', 'jpg', 'jpeg', 'gif', 'txt', 'csv', 'log', 'zip'];
+
+    public const UNKNOWN_MIME_TYPE = 'application/octet-stream';
+
     private const DIRECTORY = 'ticket-attachments';
 
     public function handle(Ticket $ticket, User $uploader, UploadedFile $file): Attachment
     {
-        $path = $file->store(self::DIRECTORY.'/'.$ticket->getKey(), self::DISK);
+        $path = $file->store(sprintf('%s/%s', self::DIRECTORY, $ticket->getKey()), self::DISK);
 
         if ($path === false) {
             throw AttachmentStorageFailed::forTicket($ticket);
@@ -32,7 +40,7 @@ class AttachFileToTicket
             'disk' => self::DISK,
             'path' => $path,
             'original_name' => $file->getClientOriginalName(),
-            'mime_type' => $file->getMimeType() ?? Attachment::UNKNOWN_MIME_TYPE,
+            'mime_type' => $file->getMimeType() ?? self::UNKNOWN_MIME_TYPE,
             'size_in_bytes' => $file->getSize(),
         ]);
     }

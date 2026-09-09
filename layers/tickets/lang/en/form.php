@@ -26,6 +26,7 @@ return [
         'updated' => 'The ticket has been saved.',
         'assigned' => 'The ticket has been assigned.',
         'transition_refused' => 'A ticket cannot move from ":from" to ":target".',
+        'ticket_is_closed' => 'This ticket is closed: it can no longer be changed.',
     ],
     'empty' => [
         'technicians' => 'No technician can take this ticket yet.',

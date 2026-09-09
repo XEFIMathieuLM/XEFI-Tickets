@@ -4,14 +4,12 @@ namespace Tickets\Http\Controllers;
 
 use Illuminate\Support\Carbon;
 use Symfony\Component\HttpFoundation\StreamedResponse;
+use Tickets\Access\Controls\TicketControl;
 use Tickets\Models\Ticket;
 
 /**
- * CSV export of the tickets resolved during the current month.
- *
- * This endpoint sits outside the REST resource on purpose: it does not read or
- * write the ticket representation, it produces a file in another format, so
- * there is nothing for a Resource to declare.
+ * Outside the REST resource on purpose: this produces a file in another
+ * format, so there is nothing for a Resource to declare.
  */
 class ExportResolvedTicketsController
 {
@@ -24,8 +22,8 @@ class ExportResolvedTicketsController
     {
         $month = Carbon::now()->startOfMonth();
 
-        $resolvedTickets = Ticket::query()
-            ->controlled()
+        $resolvedTickets = app(TicketControl::class)
+            ->forCurrentUser(Ticket::query())
             ->select(self::COLUMNS)
             ->whereBetween('resolved_at', [$month, $month->copy()->endOfMonth()])
             ->orderBy('resolved_at');
@@ -46,7 +44,7 @@ class ExportResolvedTicketsController
                     ], escape: '');
                 });
             },
-            'resolved-tickets-'.$month->format('Y-m').'.csv',
+            "resolved-tickets-{$month->format('Y-m')}.csv",
             ['Content-Type' => 'text/csv'],
         );
     }

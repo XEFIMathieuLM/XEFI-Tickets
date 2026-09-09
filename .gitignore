@@ -1,8 +1,7 @@
 *.log
 .DS_Store
-.env
-.env.backup
-.env.production
+.env*
+!.env.example
 .phpactor.json
 .phpunit.result.cache
 /.codex
@@ -19,6 +18,8 @@
 /public/hot
 /public/storage
 /storage/*.key
+/storage/app/private/ticket-attachments
+/storage/framework/testing
 /storage/pail
 /vendor
 _ide_helper.php

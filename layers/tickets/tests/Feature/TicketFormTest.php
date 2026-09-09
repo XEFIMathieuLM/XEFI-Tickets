@@ -22,7 +22,6 @@ class TicketFormTest extends TestCase
             ->test(TicketForm::class)
             ->set('title', 'The printer is offline')
             ->set('description', 'Nothing comes out since this morning.')
-            ->set('priority', TicketPriority::High->value)
             ->call('save')
             ->assertHasNoErrors();
 
@@ -30,16 +29,16 @@ class TicketFormTest extends TestCase
             'title' => 'The printer is offline',
             'requester_id' => $requester->id,
             'status' => TicketStatus::Open->value,
-            'priority' => TicketPriority::High->value,
+            'priority' => TicketPriority::default()->value,
         ]);
     }
 
     public function test_it_edits_an_existing_ticket(): void
     {
-        $manager = $this->userWith(TicketRole::Manager);
+        $editor = $this->userWith(TicketRole::Manager);
         $ticket = Ticket::factory()->create(['title' => 'Old title']);
 
-        Livewire::actingAs($manager)
+        Livewire::actingAs($editor)
             ->test(TicketForm::class, ['ticket' => $ticket])
             ->assertSet('title', 'Old title')
             ->set('title', 'A much clearer title')
@@ -60,26 +59,12 @@ class TicketFormTest extends TestCase
             ->assertHasErrors([
                 'title' => 'required',
                 'description' => 'required',
-                'priority' => 'required',
             ]);
 
         $this->assertDatabaseCount('tickets', 0);
     }
 
-    public function test_it_refuses_a_priority_the_enum_does_not_know(): void
-    {
-        Livewire::actingAs($this->userWith(TicketRole::Requester))
-            ->test(TicketForm::class)
-            ->set('title', 'Keyboard broken')
-            ->set('description', 'Three keys do not answer.')
-            ->set('priority', 'urgentissime')
-            ->call('save')
-            ->assertHasErrors(['priority']);
-
-        $this->assertDatabaseCount('tickets', 0);
-    }
-
-    public function test_a_legal_assignment_reports_success_and_notifies(): void
+    public function test_an_assignment_reports_success_and_notifies(): void
     {
         Notification::fake();
 
@@ -92,16 +77,29 @@ class TicketFormTest extends TestCase
             ->assertHasNoErrors()
             ->assertSet('successMessage', __('tickets::form.feedback.assigned'));
 
-        $this->assertDatabaseHas('tickets', [
-            'id' => $ticket->id,
-            'status' => TicketStatus::Assigned->value,
-            'assigned_technician_id' => $technician->id,
-        ]);
-
         Notification::assertSentTo($technician, TicketAssignedNotification::class);
     }
 
-    public function test_an_illegal_assignment_reports_a_translated_error_and_stops(): void
+    public function test_handing_a_ticket_over_leaves_its_status_alone(): void
+    {
+        Notification::fake();
+
+        $technician = $this->userWith(TicketRole::Technician);
+        $ticket = Ticket::factory()->create(['status' => TicketStatus::Open]);
+
+        Livewire::actingAs($this->userWith(TicketRole::Manager))
+            ->test(TicketForm::class, ['ticket' => $ticket])
+            ->call('assign', $technician->id)
+            ->assertHasNoErrors();
+
+        $this->assertDatabaseHas('tickets', [
+            'id' => $ticket->id,
+            'status' => TicketStatus::Open->value,
+            'assigned_technician_id' => $technician->id,
+        ]);
+    }
+
+    public function test_a_closed_ticket_is_handed_to_nobody(): void
     {
         Notification::fake();
 

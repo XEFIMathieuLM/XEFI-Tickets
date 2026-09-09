@@ -8,22 +8,19 @@ use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Livewire\Attributes\Locked;
 use Livewire\Component;
-use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
-use Livewire\WithFileUploads;
 use Tickets\Actions\AttachFileToTicket;
 use Tickets\Actions\RemoveTicketAttachment;
+use Tickets\Livewire\Concerns\AcceptsAnAttachment;
 use Tickets\Models\Attachment;
 use Tickets\Models\Ticket;
 
 class TicketAttachments extends Component
 {
+    use AcceptsAnAttachment;
     use AuthorizesRequests;
-    use WithFileUploads;
 
     #[Locked]
     public int $ticketId;
-
-    public ?TemporaryUploadedFile $upload = null;
 
     public ?string $successMessage = null;
 
@@ -35,21 +32,11 @@ class TicketAttachments extends Component
     }
 
     /**
-     * The size ceiling is read from the model, so the rule and the domain can
-     * never disagree on what "too big" means.
-     *
      * @return array<string, mixed>
      */
     protected function rules(): array
     {
-        return [
-            'upload' => [
-                'required',
-                'file',
-                'max:'.Attachment::MAX_SIZE_IN_KILOBYTES,
-                'extensions:'.implode(',', Attachment::ALLOWED_EXTENSIONS),
-            ],
-        ];
+        return ['upload' => array_merge(['required'], $this->attachmentRules())];
     }
 
     /**
@@ -67,9 +54,8 @@ class TicketAttachments extends Component
         $ticket = $this->ticket();
         $this->authorize('view', $ticket);
 
-        app(AttachFileToTicket::class)->handle($ticket, $this->currentUser(), $this->upload);
+        $this->storeTheUpload($ticket, $this->currentUser());
 
-        $this->reset('upload');
         $this->successMessage = __('tickets::attachments.feedback.attached');
     }
 
@@ -87,6 +73,7 @@ class TicketAttachments extends Component
     {
         return view('tickets::livewire.ticket-attachments', [
             'attachments' => $this->attachments(),
+            'maxSizeInKilobytes' => AttachFileToTicket::MAX_SIZE_IN_KILOBYTES,
         ]);
     }
 
@@ -100,11 +87,7 @@ class TicketAttachments extends Component
      */
     private function attachments(): Collection
     {
-        return Attachment::query()
-            ->where('ticket_id', $this->ticketId)
-            ->with('uploadedBy')
-            ->latest()
-            ->get();
+        return $this->ticket()->attachments()->with('uploadedBy')->latest()->get();
     }
 
     private function currentUser(): User

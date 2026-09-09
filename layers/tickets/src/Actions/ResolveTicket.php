@@ -5,6 +5,7 @@ namespace Tickets\Actions;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Tickets\Actions\Concerns\TransitionsTicket;
+use Tickets\Contracts\MovesTicket;
 use Tickets\Enums\TicketStatus;
 use Tickets\Jobs\EvaluateResolutionDelay;
 use Tickets\Models\Ticket;
@@ -13,7 +14,7 @@ use Tickets\Models\Ticket;
  * InProgress → Resolved. Stamps the resolution date and asks for the delay
  * verdict, which the job may only compute once the row is committed.
  */
-class ResolveTicket
+class ResolveTicket implements MovesTicket
 {
     use TransitionsTicket;
 

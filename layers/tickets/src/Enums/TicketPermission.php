@@ -13,5 +13,6 @@ enum TicketPermission: string
     case ViewAll = 'tickets.view.all';
     case Create = 'tickets.create';
     case Assign = 'tickets.assign';
+    case Handle = 'tickets.handle';
     case Close = 'tickets.close';
 }

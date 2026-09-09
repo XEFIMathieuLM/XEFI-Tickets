@@ -32,13 +32,13 @@ class TicketFactory extends Factory
     }
 
     /**
-     * Indicate that the ticket has been handed over to a technician.
+     * Indicate that a technician holds the ticket. Holding it says nothing
+     * about where the ticket stands, so the status is left alone.
      */
     public function assigned(): static
     {
         return $this->state(fn (array $attributes) => [
             'assigned_technician_id' => User::factory(),
-            'status' => TicketStatus::Assigned,
         ]);
     }
 }

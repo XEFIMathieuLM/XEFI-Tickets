@@ -3,14 +3,16 @@
 namespace Tickets\Rest\Actions;
 
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Str;
 use Lomkit\Rest\Actions\Action;
+use Tickets\Enums\TicketPermission;
 use Tickets\Models\Ticket;
 
 /**
- * Exposes one business transition over the API. The action itself holds no
- * rule: it hands each ticket to the matching action class, which refuses an
- * illegal move by throwing, and the exception carries the 409 on its own.
+ * Exposes one business transition over the API. Which tickets the caller may
+ * touch comes from the perimeters; which moves it may make comes from the
+ * permission the action names.
  */
 abstract class TicketTransitionAction extends Action
 {
@@ -28,10 +30,14 @@ abstract class TicketTransitionAction extends Action
      */
     public function handle(array $fields, Collection $models): void
     {
+        Gate::authorize($this->permission()->value);
+
         foreach ($models as $ticket) {
             $this->applyTo($ticket, $fields);
         }
     }
+
+    abstract protected function permission(): TicketPermission;
 
     public function uriKey(): string
     {

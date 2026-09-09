@@ -5,7 +5,6 @@ namespace Tickets\Database\Seeders;
 use App\Models\User;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
-use Illuminate\Support\Str;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
 use Spatie\Permission\PermissionRegistrar;
@@ -28,8 +27,6 @@ class TicketAccessSeeder extends Seeder
             Permission::findOrCreate($permission->value);
         }
 
-        // Spatie resolves permission names against its cache: without this flush,
-        // syncPermissions() below would not see the ones just created.
         $registrar->forgetCachedPermissions();
 
         foreach (TicketRole::cases() as $role) {
@@ -52,9 +49,9 @@ class TicketAccessSeeder extends Seeder
 
     private function createReferenceUser(TicketRole $role): void
     {
-        User::firstOrCreate(
+        User::updateOrCreate(
             ['email' => $role->referenceEmail()],
-            ['name' => Str::headline($role->value), 'password' => 'password'],
+            ['name' => __($role->translationKey()), 'password' => 'password'],
         )->syncRoles($role->value);
     }
 }

@@ -49,7 +49,7 @@ class TicketAttachmentTest extends TestCase
 
         Livewire::actingAs($requester)
             ->test(TicketAttachments::class, ['ticket' => $ticket])
-            ->set('upload', UploadedFile::fake()->create('huge.pdf', Attachment::MAX_SIZE_IN_KILOBYTES + 1))
+            ->set('upload', UploadedFile::fake()->create('huge.pdf', AttachFileToTicket::MAX_SIZE_IN_KILOBYTES + 1))
             ->call('attach')
             ->assertHasErrors(['upload' => 'max']);
 

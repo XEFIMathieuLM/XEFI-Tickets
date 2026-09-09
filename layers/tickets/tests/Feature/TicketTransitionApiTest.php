@@ -12,7 +12,7 @@ use Tickets\Tests\TestCase;
 
 class TicketTransitionApiTest extends TestCase
 {
-    private const ACTIONS_URI = '/api/v1/tickets/actions/';
+    private const ACTIONS_URI = '/api/v1/tickets/actions/%s';
 
     public function test_it_assigns_a_ticket_through_the_api(): void
     {
@@ -22,7 +22,7 @@ class TicketTransitionApiTest extends TestCase
         $ticket = Ticket::factory()->create(['status' => TicketStatus::Open]);
 
         $this->actingAs($this->userWith(TicketRole::Manager))
-            ->postJson(self::ACTIONS_URI.'assign-ticket', [
+            ->postJson(sprintf(self::ACTIONS_URI, 'assign-ticket'), [
                 'resources' => [$ticket->id],
                 'fields' => [['name' => 'technician_id', 'value' => $technician->id]],
             ])
@@ -30,22 +30,22 @@ class TicketTransitionApiTest extends TestCase
 
         $this->assertDatabaseHas('tickets', [
             'id' => $ticket->id,
-            'status' => TicketStatus::Assigned->value,
+            'status' => TicketStatus::Open->value,
             'assigned_technician_id' => $technician->id,
         ]);
     }
 
-    public function test_it_answers_409_on_a_transition_absent_from_the_table(): void
+    public function test_it_answers_409_on_a_move_a_closed_ticket_cannot_make(): void
     {
-        $ticket = Ticket::factory()->create(['status' => TicketStatus::Open]);
+        $ticket = Ticket::factory()->create(['status' => TicketStatus::Closed]);
 
         $this->actingAs($this->userWith(TicketRole::Manager))
-            ->postJson(self::ACTIONS_URI.'close-ticket', ['resources' => [$ticket->id]])
+            ->postJson(sprintf(self::ACTIONS_URI, 'start-ticket-work'), ['resources' => [$ticket->id]])
             ->assertConflict();
 
         $this->assertDatabaseHas('tickets', [
             'id' => $ticket->id,
-            'status' => TicketStatus::Open->value,
+            'status' => TicketStatus::Closed->value,
         ]);
     }
 
@@ -73,7 +73,7 @@ class TicketTransitionApiTest extends TestCase
         $ticket = Ticket::factory()->create(['status' => TicketStatus::Open]);
 
         $this->actingAs($this->userWith(TicketRole::Manager))
-            ->postJson(self::ACTIONS_URI.'assign-ticket', [
+            ->postJson(sprintf(self::ACTIONS_URI, 'assign-ticket'), [
                 'resources' => [$ticket->id],
                 'fields' => [['name' => 'technician_id', 'value' => $technician->id]],
             ])
@@ -90,7 +90,7 @@ class TicketTransitionApiTest extends TestCase
         $ticket = Ticket::factory()->create(['status' => TicketStatus::Closed]);
 
         $this->actingAs($this->userWith(TicketRole::Manager))
-            ->postJson(self::ACTIONS_URI.'assign-ticket', [
+            ->postJson(sprintf(self::ACTIONS_URI, 'assign-ticket'), [
                 'resources' => [$ticket->id],
                 'fields' => [['name' => 'technician_id', 'value' => $technician->id]],
             ])

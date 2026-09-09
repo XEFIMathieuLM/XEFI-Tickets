@@ -19,18 +19,20 @@ use Tickets\Actions\RemoveTicketDependents;
 use Tickets\Database\Factories\TicketFactory;
 use Tickets\Enums\TicketPriority;
 use Tickets\Enums\TicketStatus;
+use Tickets\Models\Attributes\TracksChanges;
+use Tickets\Models\Concerns\RecordsChanges;
 use Tickets\Policies\TicketPolicy;
 
 /**
- * The columns whose runtime type comes from casts() rather than from the schema.
- *
  * @property TicketStatus $status
  * @property TicketPriority $priority
  * @property Carbon|null $resolved_at
+ * @property Carbon|null $escalated_at
  */
 #[Fillable(['requester_id', 'assigned_technician_id', 'title', 'description', 'status', 'priority', 'resolved_at'])]
 #[UseFactory(TicketFactory::class)]
 #[UsePolicy(TicketPolicy::class)]
+#[TracksChanges(['status', 'priority', 'assigned_technician_id'])]
 class Ticket extends Model
 {
     use HasControl;
@@ -39,12 +41,23 @@ class Ticket extends Model
     use HasFactory;
 
     use Prunable;
+    use RecordsChanges;
     use SoftDeletes;
 
     /**
      * How long a soft-deleted ticket is retained before the scheduled purge removes it.
      */
     public const RETENTION_DAYS = 90;
+
+    /**
+     * Whoever opens a ticket does not weigh it, so every ticket enters the
+     * lifecycle at the same importance until the support team says otherwise.
+     *
+     * @var array<string, mixed>
+     */
+    protected $attributes = [
+        'priority' => TicketPriority::Normal->value,
+    ];
 
     /**
      * Get the attributes that should be cast.
@@ -57,6 +70,7 @@ class Ticket extends Model
             'status' => TicketStatus::class,
             'priority' => TicketPriority::class,
             'resolved_at' => 'datetime',
+            'escalated_at' => 'datetime',
             'is_resolved_on_time' => 'boolean',
         ];
     }

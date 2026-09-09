@@ -10,9 +10,11 @@ use Tickets\Tests\TestCase;
 
 class TicketAssignedNotificationTest extends TestCase
 {
-    public function test_it_goes_out_by_mail(): void
+    public function test_a_quiet_priority_goes_out_by_mail_alone(): void
     {
-        $notification = new TicketAssignedNotification(Ticket::factory()->create());
+        $ticket = Ticket::factory()->create(['priority' => TicketPriority::Low]);
+
+        $notification = new TicketAssignedNotification($ticket);
 
         $this->assertSame(['mail'], $notification->via(User::factory()->create()));
     }

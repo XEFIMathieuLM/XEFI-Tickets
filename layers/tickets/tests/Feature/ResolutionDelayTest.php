@@ -3,8 +3,8 @@
 namespace Tickets\Tests\Feature;
 
 use Illuminate\Support\Facades\Queue;
-use Tickets\Actions\ReopenTicket;
 use Tickets\Actions\ResolveTicket;
+use Tickets\Actions\StartTicketWork;
 use Tickets\Enums\TicketPriority;
 use Tickets\Enums\TicketStatus;
 use Tickets\Jobs\EvaluateResolutionDelay;
@@ -67,7 +67,7 @@ class ResolutionDelayTest extends TestCase
     {
         $ticket = $this->resolveAfter(TicketPriority::High, hours: 2);
 
-        app(ReopenTicket::class)->handle($ticket);
+        app(StartTicketWork::class)->handle($ticket);
 
         $this->assertNull($ticket->fresh()?->is_resolved_on_time);
     }

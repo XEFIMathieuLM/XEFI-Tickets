@@ -6,12 +6,8 @@ use App\Models\User;
 use Tickets\Models\Attachment;
 
 /**
- * An attachment is reachable only through the ticket it hangs on, and that
- * ticket has already passed the perimeters of TicketControl. Reading is
- * therefore settled upstream, and re-asking here would mean one query per row.
- *
- * Removal is a different matter: it targets a single attachment named by the
- * client, so it is checked against the parent for real.
+ * Reading is settled upstream by the parent ticket's perimeters; removal
+ * targets one named attachment, so it is checked against that parent.
  */
 class AttachmentPolicy
 {

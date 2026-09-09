@@ -3,24 +3,29 @@
 namespace Tickets\Livewire;
 
 use App\Models\User;
+use Closure;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\Rule;
-use Livewire\Attributes\Layout;
 use Livewire\Attributes\Locked;
 use Livewire\Component;
+use Throwable;
 use Tickets\Actions\AssignTicket;
+use Tickets\Actions\AttachFileToTicket;
 use Tickets\Actions\OpenTicket;
 use Tickets\Actions\UpdateTicketDetails;
 use Tickets\Enums\TicketPermission;
 use Tickets\Enums\TicketPriority;
 use Tickets\Exceptions\IllegalTicketTransition;
+use Tickets\Exceptions\TicketIsClosed;
+use Tickets\Livewire\Concerns\AcceptsAnAttachment;
 use Tickets\Models\Ticket;
 
-#[Layout('tickets::layouts.app')]
 class TicketForm extends Component
 {
+    use AcceptsAnAttachment;
     use AuthorizesRequests;
 
     #[Locked]
@@ -51,18 +56,34 @@ class TicketForm extends Component
     }
 
     /**
-     * The only place the shape of a ticket is described. The priority is
-     * checked against the enum itself, never against a copied list.
+     * The only place the shape of a ticket is described.
      *
      * @return array<string, mixed>
      */
     protected function rules(): array
     {
-        return [
+        $rules = [
             'title' => ['required', 'string', 'max:255'],
             'description' => ['required', 'string'],
-            'priority' => ['required', Rule::enum(TicketPriority::class)],
         ];
+
+        if ($this->maySetPriority()) {
+            $rules['priority'] = ['required', Rule::enum(TicketPriority::class)];
+        }
+
+        if ($this->ticketId === null) {
+            $rules['upload'] = array_merge(['nullable'], $this->attachmentRules());
+        }
+
+        return $rules;
+    }
+
+    /**
+     * Whoever opens a ticket does not weigh it; the support team does.
+     */
+    public function maySetPriority(): bool
+    {
+        return Gate::allows(TicketPermission::Handle->value);
     }
 
     /**
@@ -81,17 +102,21 @@ class TicketForm extends Component
     {
         $this->validate();
 
-        $priority = TicketPriority::from($this->priority);
+        $priority = $this->maySetPriority() ? TicketPriority::from($this->priority) : null;
         $ticket = $this->ticket();
 
         if ($ticket === null) {
             $this->authorize('create', Ticket::class);
 
-            $ticket = app(OpenTicket::class)->handle(
-                $this->currentUser(), $this->title, $this->description, $priority,
+            $author = $this->currentUser();
+
+            $opened = app(OpenTicket::class)->handle(
+                $author, $this->title, $this->description, $priority,
             );
 
-            $this->ticketId = $ticket->getKey();
+            $this->storeTheUpload($opened, $author);
+
+            $this->ticketId = $opened->getKey();
             $this->successMessage = __('tickets::form.feedback.opened');
 
             return;
@@ -104,10 +129,6 @@ class TicketForm extends Component
         $this->successMessage = __('tickets::form.feedback.updated');
     }
 
-    /**
-     * The component owns no transition rule. It calls the action and turns the
-     * one business exception it expects into a message the user can read.
-     */
     public function assign(int $technicianId): void
     {
         $ticket = $this->ticket();
@@ -117,20 +138,40 @@ class TicketForm extends Component
         }
 
         $this->authorize('update', $ticket);
+        Gate::authorize(TicketPermission::Assign->value);
+
         $this->successMessage = null;
 
-        try {
-            app(AssignTicket::class)->handle($ticket, User::findOrFail($technicianId));
-        } catch (IllegalTicketTransition $refusal) {
-            $this->addError('transition', __('tickets::form.feedback.transition_refused', [
-                'from' => __('tickets::status.'.$refusal->from()->value),
-                'target' => __('tickets::status.'.$refusal->target()->value),
-            ]));
+        app(AssignTicket::class)->handle($ticket, User::findOrFail($technicianId));
+
+        $this->successMessage = __('tickets::form.feedback.assigned');
+    }
+
+    /**
+     * Livewire hands the component any error raised during an action. Only the
+     * refusal this screen can explain is turned into a message; the rest keeps
+     * travelling untouched.
+     */
+    public function exception(Throwable $e, Closure $stopPropagation): void
+    {
+        if ($e instanceof TicketIsClosed) {
+            $this->addError('transition', __('tickets::form.feedback.ticket_is_closed'));
+
+            $stopPropagation();
 
             return;
         }
 
-        $this->successMessage = __('tickets::form.feedback.assigned');
+        if (! $e instanceof IllegalTicketTransition) {
+            return;
+        }
+
+        $this->addError('transition', __('tickets::form.feedback.transition_refused', [
+            'from' => __($e->from()->translationKey()),
+            'target' => __($e->target()->translationKey()),
+        ]));
+
+        $stopPropagation();
     }
 
     public function render(): View
@@ -138,6 +179,8 @@ class TicketForm extends Component
         return view('tickets::livewire.ticket-form', [
             'ticket' => $this->ticket(),
             'priorities' => TicketPriority::cases(),
+            'maySetPriority' => $this->maySetPriority(),
+            'maxSizeInKilobytes' => AttachFileToTicket::MAX_SIZE_IN_KILOBYTES,
             'technicians' => $this->technicians(),
         ]);
     }
@@ -148,8 +191,7 @@ class TicketForm extends Component
     }
 
     /**
-     * Candidates are picked by the permission that defines them, never by a
-     * role name.
+     * Candidates come from the permission that defines them, not a role name.
      *
      * @return Collection<int, User>
      */

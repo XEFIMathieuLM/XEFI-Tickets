@@ -7,11 +7,8 @@ use Tickets\Models\Attachment;
 use Tickets\Models\Ticket;
 
 /**
- * Clears what hangs on a ticket before it is destroyed for good.
- *
- * No foreign key cascades in this schema, so the children have to go first and
- * explicitly. The attachment files go with their rows, otherwise the disk keeps
- * growing on bytes nothing points at any more.
+ * Nothing cascades in this schema, so the children of a ticket about to be
+ * destroyed have to go first, files included.
  */
 class RemoveTicketDependents
 {

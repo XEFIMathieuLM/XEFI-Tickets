@@ -10,6 +10,7 @@ return [
     ],
     'hints' => [
         'max_size' => 'Up to :size KB per file.',
+        'optional_at_opening' => 'Optional. Up to :size KB. You may add more afterwards.',
     ],
     'actions' => [
         'attach' => 'Attach',

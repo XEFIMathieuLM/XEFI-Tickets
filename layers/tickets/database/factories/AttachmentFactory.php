@@ -21,22 +21,22 @@ class AttachmentFactory extends Factory
      */
     public function definition(): array
     {
-        $name = faker()->words(2).'.txt';
+        $stem = faker()->words(2);
+        $reference = faker()->uuid();
 
         return [
             'ticket_id' => Ticket::factory(),
             'uploaded_by_id' => User::factory(),
             'disk' => AttachFileToTicket::DISK,
-            'path' => 'ticket-attachments/'.faker()->uuid().'.txt',
-            'original_name' => $name,
+            'path' => "ticket-attachments/{$reference}.txt",
+            'original_name' => "{$stem}.txt",
             'mime_type' => 'text/plain',
             'size_in_bytes' => faker()->number(200, 40000),
         ];
     }
 
     /**
-     * Also writes the bytes, so a seeded environment has files that really
-     * exist behind their rows.
+     * Also writes the bytes, so a seeded row points at a file that exists.
      */
     public function stored(): static
     {

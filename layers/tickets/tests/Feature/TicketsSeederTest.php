@@ -40,7 +40,10 @@ class TicketsSeederTest extends TestCase
         $this->seed(TicketsSeeder::class);
 
         foreach (TicketRole::cases() as $role) {
-            $this->assertDatabaseHas('users', ['email' => $role->referenceEmail()]);
+            $this->assertDatabaseHas('users', [
+                'email' => $role->referenceEmail(),
+                'name' => __($role->translationKey()),
+            ]);
         }
     }
 }

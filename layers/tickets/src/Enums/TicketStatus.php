@@ -5,7 +5,6 @@ namespace Tickets\Enums;
 enum TicketStatus: string
 {
     case Open = 'open';
-    case Assigned = 'assigned';
     case InProgress = 'in_progress';
     case Resolved = 'resolved';
     case Closed = 'closed';
@@ -19,19 +18,44 @@ enum TicketStatus: string
     }
 
     /**
-     * The statuses this one may move to. Anything absent is illegal.
+     * Every status a ticket still moves through. What a ticket never leaves
+     * belongs to the archive, not to the working list.
+     *
+     * @return array<int, self>
+     */
+    public static function live(): array
+    {
+        return array_values(array_filter(
+            self::cases(),
+            fn (self $status): bool => ! $status->isTerminal(),
+        ));
+    }
+
+    /**
+     * The key a view translates. The wording itself never enters the enum.
+     */
+    public function translationKey(): string
+    {
+        return "tickets::status.{$this->value}";
+    }
+
+    /**
+     * The statuses this one may move to. The support team moves a ticket where
+     * it judges useful, under two rules only: closing is final, and standing
+     * still is not a move.
      *
      * @return array<int, self>
      */
     public function allowedTransitions(): array
     {
-        return match ($this) {
-            self::Open => [self::Assigned],
-            self::Assigned => [self::InProgress, self::Open],
-            self::InProgress => [self::Resolved, self::Assigned],
-            self::Resolved => [self::Closed, self::InProgress],
-            self::Closed => [],
-        };
+        if ($this->isTerminal()) {
+            return [];
+        }
+
+        return array_values(array_filter(
+            self::cases(),
+            fn (self $target): bool => $target !== $this,
+        ));
     }
 
     public function canTransitionTo(self $target): bool

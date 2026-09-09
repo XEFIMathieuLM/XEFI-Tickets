@@ -5,17 +5,21 @@ namespace Tickets\Notifications;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 use Tickets\Models\Ticket;
+use Tickets\Notifications\Policies\NotificationPolicyResolver;
 
 class TicketAssignedNotification extends Notification
 {
     public function __construct(private readonly Ticket $ticket) {}
 
     /**
+     * The channels come from the priority, through a policy this class never
+     * inspects: no condition here, and none at the call site either.
+     *
      * @return array<int, string>
      */
     public function via(object $notifiable): array
     {
-        return ['mail'];
+        return app(NotificationPolicyResolver::class)->for($this->ticket->priority)->channels();
     }
 
     public function toMail(object $notifiable): MailMessage
